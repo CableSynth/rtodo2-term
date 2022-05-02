@@ -1,8 +1,7 @@
-
 use serde::{Deserialize, Serialize};
 
+use clap::{Parser, Subcommand};
 use std::{cell::Cell, collections::LinkedList};
-use clap::Parser;
 
 #[derive(Debug, Serialize, Deserialize, Copy, Clone)]
 enum Status {
@@ -29,17 +28,22 @@ enum LifeCycle {
     Yearly,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, )]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct Todo {
     title: String,
     description: String,
     status: Cell<Status>,
     lifespan: Lifespan,
-    lifecycle: LifeCycle, 
+    lifecycle: LifeCycle,
 }
 
 impl Todo {
-    pub fn new(title: String, description: String, lifespan: Lifespan, lifecycle: LifeCycle) -> Self {
+    pub fn new(
+        title: String,
+        description: String,
+        lifespan: Lifespan,
+        lifecycle: LifeCycle,
+    ) -> Self {
         Self {
             title,
             description,
@@ -53,16 +57,15 @@ impl Todo {
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about=None)]
 struct Cli {
-    ///Name of a new todo
-    name: Option<String>,
-
-    ///List the todos
-    list: Option<bool>,
+    #[clap(subcommand)]
+    command: Commands,
 }
+
+#[derive(Debug, Subcommand)]
+enum Commands {}
 
 fn main() {
     let args = Cli::parse();
 
     print!("{:?}", args);
-
 }
