@@ -52,13 +52,17 @@ impl Todo {
 ///Simple todo command line tool
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about=None)]
-struct Args {
+struct Cli {
     ///Name of a new todo
-    #[clap(short, long)]
-    name: String,
+    name: Option<String>,
 
+    ///List the todos
+    list: Option<bool>,
 }
 
 fn main() {
-    println!("Hello, world!");
+    let args = Cli::parse();
+
+    print!("{:?}", args);
+
 }
