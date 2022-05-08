@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 serde = {version ="1.0.136", features = ["derive"] } 
 clap = { version = "3.1.14", features = ["derive"] }
+shellexpand = "2.1.0"
