@@ -1,7 +1,8 @@
-use serde::{Deserialize, Serialize};
-
 use clap::{Parser, Subcommand};
+use serde::{Deserialize, Serialize};
+use serde_json::Result;
 use std::env;
+use std::io::Read;
 use std::{
     cell::Cell,
     collections::LinkedList,
@@ -61,6 +62,45 @@ impl Todo {
         }
     }
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct Todos {
+    todos: Vec<Todo>,
+}
+
+impl Todos {
+    fn new() -> Self {
+        Self { todos: vec![] }
+    }
+
+    fn load(&mut self) {
+        let file_path = shellexpand::full(TODO_FILE).unwrap();
+        let path = path::Path::new(file_path.as_ref());
+        let prefix = path.parent().unwrap();
+
+        DirBuilder::new().recursive(true).create(prefix).unwrap();
+        let mut todo_file = fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(file_path.as_ref())
+            .expect("Unable to open file");
+        let mut data = String::new();
+        todo_file
+            .read_to_string(&mut data)
+            .expect("Unable to read file");
+        if data.is_empty() {
+            data = String::from("[]")
+        }
+        self.todos = serde_json::from_str(&data).unwrap();
+    }
+
+    fn get_all(&self) -> &Vec<Todo> {
+        &self.todos
+    }
+
+    fn add(&mut self, )
+}
 ///Simple todo command line tool
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about=None)]
@@ -80,13 +120,12 @@ enum Commands {
     },
 
     /// List todos
-    #[clap(arg_required_else_help = true)]
     List,
 
     /// Edit todo
     #[clap(arg_required_else_help = true)]
     Edit {
-        /// Index of the
+        /// Index of the todo for edit
         index: i16,
     },
 
@@ -99,13 +138,32 @@ enum Commands {
 }
 
 fn main() {
-    let path_name = shellexpand::full(TODO_FILE).unwrap();
-    let path = path::Path::new(path_name.as_ref());
+    let file_path = shellexpand::full(TODO_FILE).unwrap();
+    let path = path::Path::new(file_path.as_ref());
     let prefix = path.parent().unwrap();
 
     DirBuilder::new().recursive(true).create(prefix).unwrap();
+    let todo_file = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .open(file_path.as_ref());
+    let args = Cli::parse();
 
-    // let args = Cli::parse();
+    match args.command {
+        Commands::New { todo_str } => {
+            println!("new: {}", todo_str)
+        }
+        Commands::List => {
+            println!("list todos ya nerd")
+        }
+        Commands::Edit { index } => {
+            println!("edit {} todo", index)
+        }
+        Commands::Remove { index } => {
+            println!("Remove {} todo", index)
+        }
+    }
 
     print!("{:?}", prefix);
 }
