@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use serde::{Deserialize, Serialize};
 use serde_json::Result;
-use std::env;
+use std::{env, io};
 use std::io::Read;
 use std::{
     cell::Cell,
@@ -99,7 +99,9 @@ impl Todos {
         &self.todos
     }
 
-    fn add(&mut self, )
+    fn add(&mut self, todo: Todo) {
+        self.todos.push(todo)
+    }
 }
 ///Simple todo command line tool
 #[derive(Parser, Debug)]
@@ -114,7 +116,7 @@ enum Commands {
     /// New todo
     #[clap(arg_required_else_help = true)]
     New {
-        /// The text for the TODO
+        /// The title for the TODO
         #[clap(required = true)]
         todo_str: String,
     },
@@ -138,21 +140,41 @@ enum Commands {
 }
 
 fn main() {
-    let file_path = shellexpand::full(TODO_FILE).unwrap();
-    let path = path::Path::new(file_path.as_ref());
-    let prefix = path.parent().unwrap();
+    // let file_path = shellexpand::full(TODO_FILE).unwrap();
+    // let path = path::Path::new(file_path.as_ref());
+    // let prefix = path.parent().unwrap();
 
-    DirBuilder::new().recursive(true).create(prefix).unwrap();
-    let todo_file = fs::OpenOptions::new()
-        .read(true)
-        .write(true)
-        .create(true)
-        .open(file_path.as_ref());
+    // DirBuilder::new().recursive(true).create(prefix).unwrap();
+    // let todo_file = fs::OpenOptions::new()
+    //     .read(true)
+    //     .write(true)
+    //     .create(true)
+    //     .open(file_path.as_ref());
+    let mut todos: Todos = Todos::new();
+    todos.load();
     let args = Cli::parse();
 
     match args.command {
         Commands::New { todo_str } => {
-            println!("new: {}", todo_str)
+            println!("Making a new todo: {}", todo_str);
+            println!("Enter Discription: ");
+            let mut desciption = String::new();
+            io::stdin()
+                .read_line(&mut desciption)
+                .ok()
+                .expect("Failed to read line");
+            
+            println!("Enter Lifespan: ");
+            let mut lifespan = Some(String::new());
+            while let Some(l) = &lifespan {
+                io::stdin()
+                    .read_line(l)
+                    .ok()
+                    .expect("Failed to read line");
+            }
+            
+            
+            
         }
         Commands::List => {
             println!("list todos ya nerd")
@@ -165,5 +187,4 @@ fn main() {
         }
     }
 
-    print!("{:?}", prefix);
 }
