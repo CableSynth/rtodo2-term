@@ -1,16 +1,14 @@
 use clap::{Parser, Subcommand};
 use serde::{Deserialize, Serialize};
-use serde_json::Result;
-use core::fmt;
 use std::io::{Read, Write};
 use std::{
-    cell::Cell,
-    collections::LinkedList,
     fs::{self, DirBuilder},
     path,
 };
+use serde_with::chrono::{prelude::*, Duration};
+use serde_with::serde_as;
 use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
-use std::{env, io};
+use std::io;
 
 const TODO_FILE: &str = "~/.rtodo2/todo_file";
 
@@ -21,16 +19,17 @@ enum Status {
     Overdue,
 }
 
+#[serde_as]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 struct Lifespan {
-    amount: u8,
+    #[serde_as(as = "serde_with::DurationSeconds<i64>")]
+    amount: Duration,
     unit: LifespanUnit,
 }
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Display, EnumIter, EnumString)]
 enum LifespanUnit {
     Day,
     Week,
-    Month,
     Year,
 }
 
@@ -47,7 +46,8 @@ enum LifeCycle {
 struct Todo {
     title: String,
     description: String,
-    status: Cell<Status>,
+    date: chrono::DateTime<Local>,
+    status: Status,
     lifespan: Lifespan,
     lifecycle: LifeCycle,
 }
@@ -62,9 +62,10 @@ impl Todo {
         Self {
             title,
             description,
+            date: Local::now(),
             lifespan,
             lifecycle,
-            status: Cell::new(Status::Open),
+            status: Status::Open,
         }
     }
 }
@@ -173,16 +174,7 @@ enum Commands {
 
 
 fn main() {
-    // let file_path = shellexpand::full(TODO_FILE).unwrap();
-    // let path = path::Path::new(file_path.as_ref());
-    // let prefix = path.parent().unwrap();
-
-    // DirBuilder::new().recursive(true).create(prefix).unwrap();
-    // let todo_file = fs::OpenOptions::new()
-    //     .read(true)
-    //     .write(true)
-    //     .create(true)
-    //     .open(file_path.as_ref());
+    
     let mut todos: Todos = Todos::new();
     todos.load();
     let args = Cli::parse();
@@ -207,21 +199,31 @@ fn main() {
                 .read_line(&mut lifespan)
                 .ok()
                 .expect("Failed to read line");
-            let lifespan = match lifespan.to_lowercase().trim() {
-                "day" | "0" => LifespanUnit::Day,
-                "week" | "1" => LifespanUnit::Week,
-                "month" | "2" => LifespanUnit::Month,
-                "year" | "3" => LifespanUnit::Year,
-                _ => LifespanUnit::Day,
-            };
+
             println!("Enter number of {}s: ", lifespan);
             let mut amount = String::new();
             io::stdin()
                 .read_line(&mut amount)
                 .ok()
                 .expect("Failed to read line");
-            let amount: u8 = amount.trim().parse().unwrap();
-            let lifespan = Lifespan { amount, unit: lifespan };
+
+            //Parse and read into the 
+            let amount = amount.trim().parse().unwrap();
+            let lifespan = match lifespan.to_lowercase().trim() {
+                "day" | "0" => Lifespan {
+                    amount: Duration::days(amount),
+                    unit: LifespanUnit::Day
+                },
+                "week" | "1" => Lifespan{
+                    amount: Duration::weeks(amount),
+                    unit: LifespanUnit::Week
+                },
+                "year" | "3" => Lifespan {
+                    amount: Duration::weeks(amount * 52),
+                    unit: LifespanUnit::Year
+                },
+                _ => unreachable!("Bad value"),
+            };
 
             println!("Enter Lifecycle: ");
             for (i, lifecycle) in LifeCycle::iter().enumerate() {
@@ -252,6 +254,7 @@ fn main() {
                 println!("\tDescription: {}", todo.description);
                 println!("\tLifespan: {} {}", todo.lifespan.amount, todo.lifespan.unit);
                 println!("\tLifecycle: {}", todo.lifecycle);
+                println!("\tTime left: {}", todo.date);
             }
         }
         Commands::Edit { index } => {
